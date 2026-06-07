@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Notes App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+
+    <h1>📝 Quick Notes Application</h1>
+
+    <textarea
+        id="noteInput"
+        placeholder="Write your note here..."
+    ></textarea>
+
+    <button class="save-btn" onclick="saveNote()">
+        Save Note
+    </button>
+
+    <h2>Saved Notes</h2>
+
+    <div id="notesContainer"></div>
+
+</div>
+
+<script>
+
+async function saveNote() {
+
+    const note = document.getElementById("noteInput").value;
+
+    if(note.trim() === "") {
+        alert("Please enter a note");
+        return;
+    }
+
+    await fetch("/add_note", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            note: note
+        })
+    });
+
+    document.getElementById("noteInput").value = "";
+
+    loadNotes();
+}
+
+async function loadNotes() {
+
+    const response = await fetch("/get_notes");
+    const notes = await response.json();
+
+    const container =
+        document.getElementById("notesContainer");
+
+    container.innerHTML = "";
+
+    notes.forEach(note => {
+
+        const noteCard =
+            document.createElement("div");
+
+        noteCard.className = "note";
+
+        noteCard.innerHTML = `
+            <p>${note[1]}</p>
+
+            <div class="btn-group">
+                <button
+                    class="edit-btn"
+                    onclick="editNote(${note[0]}, \`${note[1]}\`)">
+                    Edit
+                </button>
+
+                <button
+                    class="delete-btn"
+                    onclick="deleteNote(${note[0]})">
+                    Delete
+                </button>
+            </div>
+        `;
+
+        container.appendChild(noteCard);
+    });
+}
+
+async function editNote(id, currentText) {
+
+    const updatedText = prompt(
+        "Edit your note:",
+        currentText
+    );
+
+    if(updatedText === null ||
+       updatedText.trim() === "") {
+        return;
+    }
+
+    await fetch(`/update_note/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            note: updatedText
+        })
+    });
+
+    loadNotes();
+}
+
+async function deleteNote(id) {
+
+    const confirmDelete =
+        confirm("Delete this note?");
+
+    if(!confirmDelete)
+        return;
+
+    await fetch(`/delete_note/${id}`, {
+        method: "DELETE"
+    });
+
+    loadNotes();
+}
+
+loadNotes();
+
+</script>
+
+</body>
+</html>
